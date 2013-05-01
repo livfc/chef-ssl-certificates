@@ -21,37 +21,53 @@ define :ssl_certificate do
   name = params[:name] =~ /\*\.(.+)/ ? "#{$1}_wildcard" : params[:name]
   Chef::Log.info "Looking for SSL certificate #{name.inspect}"
   cert = search(:certificates, "name:#{name}").first
-  
-  if cert[:crt]
-    template "#{node[:ssl_certificates][:path]}/#{name}.crt" do
-      source 'cert.erb'
+
+  directory node[:ssl_certificates][:path] do
+    owner 'root'
+    group 'ssl-cert'
+    mode '0640'
+  end
+
+  if cert['crt']
+    certfile_content = cert['crt']
+
+    if cert['ca_bundle'] && params[:ca_bundle_combined]
+        certfile_content += "\n" + cert['ca_bundle']
+    end
+
+    file "#{node[:ssl_certificates][:path]}/#{name}.crt" do
+      content certfile_content
       owner 'root'
       group 'ssl-cert'
       mode '0640'
-      cookbook 'ssl_certificates'
-      variables :cert => cert[:crt]
     end
   end
 
-  if cert[:key]
-    template "#{node[:ssl_certificates][:path]}/#{name}.key" do
-      source 'cert.erb'
+  if cert['ca_bundle'] && ! params[:ca_bundle_combined]
+    file "#{node[:ssl_certificates][:path]}/#{name}.ca-bundle" do
+      content cert['ca_bundle']
       owner 'root'
       group 'ssl-cert'
       mode '0640'
-      cookbook 'ssl_certificates'
-      variables :cert => cert[:key]
     end
   end
 
-  if cert[:pem]
-    template "#{node[:ssl_certificates][:path]}/#{name}.pem" do
-      source 'cert.erb'
+  if cert['key']
+    file "#{node[:ssl_certificates][:path]}/#{name}.key" do
+      content cert['key']
       owner 'root'
       group 'ssl-cert'
       mode '0640'
-      cookbook 'ssl_certificates'
-      variables :cert => cert[:pem]
+
+    end
+  end
+
+  if cert['pem']
+    file "#{node[:ssl_certificates][:path]}/#{name}.pem" do
+      content cert['pem']
+      owner 'root'
+      group 'ssl-cert'
+      mode '0640'
     end
   end
 end
