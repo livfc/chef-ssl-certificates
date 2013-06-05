@@ -20,7 +20,13 @@
 define :ssl_certificate do
   name = params[:name] =~ /\*\.(.+)/ ? "#{$1}_wildcard" : params[:name]
   Chef::Log.info "Looking for SSL certificate #{name.inspect}"
-  cert = search(:certificates, "name:#{name}").first
+  #cert = search(:certificates, "name:#{name}").first
+  bag = node['ssl_certificates']['data_bag_name']
+
+  puts name.gsub(/[.]/, '-')
+
+  cert = data_bag_item(bag, name.gsub(/[.]/, '-'))
+
 
   directory node[:ssl_certificates][:path] do
     owner 'root'
